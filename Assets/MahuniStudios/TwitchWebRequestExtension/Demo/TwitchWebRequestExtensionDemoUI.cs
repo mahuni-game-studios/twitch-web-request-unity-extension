@@ -1,6 +1,7 @@
 // © Copyright 2025 Mahuni Game Studios
 
 using System.Collections.Generic;
+using System.Linq;
 using Mahuni.Twitch.Extension;
 using TMPro;
 using UnityEngine;
@@ -23,7 +24,7 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
     public TMP_InputField rewardTitleText;
     public TMP_InputField rewardCostText;
     public TextMeshProUGUI rewardResultText;
-    public Button createRewardButton, deleteRewardButton;
+    public Button createRewardButton, deleteRewardButton, getRewardsButton;
     public GameObject rewardBlocker;
     private string rewardId;
     private TwitchWebRequests twitchWebRequests;
@@ -37,6 +38,7 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
         resetAuthenticationButton.onClick.AddListener(OnResetAuthenticationButtonClicked);
         createRewardButton.onClick.AddListener(OnCreateRewardButtonClicked);
         deleteRewardButton.onClick.AddListener(OnDeleteRewardButtonClicked);
+        getRewardsButton.onClick.AddListener(OnGetRewardsButtonClicked);
         resetAuthenticationButton.interactable = TwitchLocalStorage.HasToken();
         authenticationDescriptionText.text = "Enter the channel name and your Twitch client ID to authenticate.";
         ValidateFields();
@@ -114,6 +116,7 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
         
             rewardResultText.text = "<color=\"green\">Reward created!";
             Debug.Log(rewardResultText.text);
+            ValidateFields();
         }
         else
         {
@@ -151,6 +154,26 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
             Debug.LogError(rewardResultText.text);
         }
     }
+    
+    /// <summary>
+    /// The get rewards button was clicked by the user
+    /// </summary>
+    private async void OnGetRewardsButtonClicked()
+    {
+        (TwitchResponseCode responseCode, string responseBody) response = await twitchWebRequests.GetRewards();
+       
+        if (response.responseCode == TwitchResponseCode.OK)
+        {
+            TwitchCreateRewardResponse result = (TwitchCreateRewardResponse)JsonUtility.FromJson(response.responseBody, typeof(TwitchCreateRewardResponse));
+            rewardResultText.text = $"<color=\"green\">Rewards: {(!result.data.Any() ? "no rewards yet." : string.Join(", ", result.data.Select(d => d.title)))}";
+            Debug.Log(rewardResultText.text);
+        }
+        else
+        {
+            rewardResultText.text = $"<color=\"red\">Error occured for getting rewards list: {response.responseCode}";
+            Debug.LogError(rewardResultText.text);
+        }
+    }
 
     #endregion
 
@@ -166,6 +189,7 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
         authenticateButton.interactable = !isAuthenticated && !string.IsNullOrEmpty(channelNameText.text) && !string.IsNullOrEmpty(twitchClientIdText.text);
         createRewardButton.interactable = isAuthenticated && !string.IsNullOrEmpty(rewardTitleText.text) && !string.IsNullOrEmpty(rewardCostText.text);
         deleteRewardButton.interactable = isAuthenticated && !string.IsNullOrEmpty(rewardId);
+        getRewardsButton.interactable = isAuthenticated;
         
         authenticateBlocker.SetActive(isAuthenticated);
         rewardBlocker.SetActive(!isAuthenticated);
@@ -175,9 +199,6 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
         {
             authenticationDescriptionText.text = "Enter the channel name and your Twitch client ID to authenticate.";
         }
-        
-        createRewardButton.interactable = !string.IsNullOrEmpty(rewardTitleText.text) && !string.IsNullOrEmpty(rewardCostText.text);
-        deleteRewardButton.interactable = string.IsNullOrEmpty(rewardId);
     }
 
     #endregion

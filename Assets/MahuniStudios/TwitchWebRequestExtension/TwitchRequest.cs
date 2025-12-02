@@ -13,12 +13,14 @@ namespace Mahuni.Twitch.Extension
     /// </summary>
     public static class TwitchRequest
     {
-        public static bool LOG = true;
         private const string URL = "https://api.twitch.tv/helix/";
         private const string HEADER_TOKEN = "Authorization";
         private const string HEADER_CLIENT_ID = "Client-Id";
         private const string HEADER_CLIENT_CONTENT_TYPE = "Content-Type";
         private const int REQUEST_TIMEOUT = 10;
+        
+        private static readonly bool DebugRequests = true;
+        private static readonly bool DebugResponseContent = false;
 
         #region Get
         
@@ -165,7 +167,7 @@ namespace Mahuni.Twitch.Extension
         /// <returns>The Unity web request object for a PUT request</returns>
         private static UnityWebRequest CreatePutRequest(string uri, string jsonContent)
         {
-            if (LOG) Debug.Log($"TwitchRequest: Put '{uri}'...");
+            if (DebugRequests) Debug.Log($"TwitchRequest: Put '{uri}'...");
             UnityWebRequest webRequest = UnityWebRequest.Put(BuildURL(uri), jsonContent);
             webRequest.SetDefaultHeaders();
             webRequest.SetRequestHeader(HEADER_CLIENT_CONTENT_TYPE, "application/json");
@@ -387,7 +389,7 @@ namespace Mahuni.Twitch.Extension
         }
 
         /// <summary>
-        /// Log the send request, if the static <see cref="LOG"/> is set to true
+        /// Log the send request, if the static <see cref="DebugRequests"/> is set to true
         /// </summary>
         /// <param name="requestType">The type of request (e.g. POST, GET etc.)</param>
         /// <param name="url">The URL that is being used</param>
@@ -395,25 +397,31 @@ namespace Mahuni.Twitch.Extension
         /// <param name="content">The JSON content, only sent if <paramref name="hasJsonContent"/> is true</param>
         private static void LogRequest(string requestType, string url, bool hasJsonContent, string content = "")
         {
-            if (!LOG) return;
+            if (!DebugRequests) return;
             string json = hasJsonContent ? $" with JSON content '{content}" : "";
             Debug.Log($"Send {requestType}: '{url}'{json}'...");
         }
 
         /// <summary>
-        /// Log the received request
+        /// Log the received request, if the static <see cref="DebugRequests"/> is set to true, additionally also
+        /// showing the response content if the static <see cref="DebugResponseContent"/> is set to true
         /// </summary>
         /// <param name="request">The request that was received</param>
         private static void LogResponse(UnityWebRequest request)
         {
-            if (!LOG) return;
+            if (!DebugRequests) return;
             if (request.result == UnityWebRequest.Result.Success)
             {
-                Debug.Log($"Receive {request.method}: {(TwitchResponseCode)request.responseCode} from '{request.url}'!");
+                string content = string.Empty;
+                if (DebugResponseContent && request.downloadHandler != null)
+                {
+                    content = $" -> Content: {request.downloadHandler.text}";
+                }
+                Debug.Log($"Receive {request.method}: {(TwitchResponseCode)request.responseCode} from '{request.url}'{content}");
             }
             else
             {
-                Debug.LogError($"Receive {request.method}: {(TwitchResponseCode)request.responseCode} from '{request.url} - Error: '{request.error}', Result: {request.result}");
+                Debug.LogError($"Receive {request.method}: {(TwitchResponseCode)request.responseCode} from '{request.url} -> Error: '{request.error}', Result: {request.result}");
             }
         }
         

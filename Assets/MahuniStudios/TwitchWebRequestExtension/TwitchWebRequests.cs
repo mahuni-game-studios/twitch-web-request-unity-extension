@@ -63,6 +63,16 @@ namespace Mahuni.Twitch.Extension
         #region Reward Requests
         
         /// <summary>
+        /// Gets a list of custom rewards that the specified broadcaster created.
+        /// <see href="https://dev.twitch.tv/docs/api/reference/#get-custom-reward">Official documentation</see>
+        /// </summary>
+        /// <returns>Awaitable response code and response body from requesting to get the users rewards</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> GetRewards()
+        {
+            return await TwitchRequest.AwaitableGet($"channel_points/custom_rewards?broadcaster_id={broadcasterID}");
+        }
+        
+        /// <summary>
         /// Creates a Custom Reward in the broadcaster’s channel.
         /// <see href="https://dev.twitch.tv/docs/api/reference/#create-custom-rewards">Official documentation</see>
         /// </summary>
