@@ -9,6 +9,7 @@ Available HTTP request types:
 - POST
 - DELETE
 - PATCH
+- PUT
 
 ## Code Snippet Examples
 
@@ -46,27 +47,28 @@ public class YourUnityClass : MonoBehaviour
 ```cs
 public class YourUnityClass : MonoBehaviour
 {
-    private string channelName = "some-channel";
+    private string channelName = "mychannelname";
+    private string testRewardTitle = "My awesome reward";
+    private long testRewardCost = 500;
+    private TwitchWebRequests twitchWebRequests;
     
     private void Start()
     {
-        // Initialize the web request by passing your channel name
-        TwitchWebRequests.Initialize(channelName);
+        // Initialize the web request by passing your channel name        
+        twitchWebRequests = new TwitchWebRequests(channelName);
         
-        // Start a coroutine to create a reward
-        StartCoroutine(TwitchWebRequests.CreateReward(rewardTitleText.text, cost, CreateRewardCallback));
+        // Create a reward asynchronously
+        OnCreateReward(testRewardTitle, testRewardCost);
     }
       
-    private void CreateRewardCallback(TwitchResponseCode code, string message)
+    private async void OnCreateReward(string title, long cost)
     {
-        if (code != TwitchResponseCode.OK)
-        {            
-            Debug.LogError(rewardResultText.text);
-            return;
-        }
-
-        TwitchCreateRewardResponse result = (TwitchCreateRewardResponse)JsonUtility.FromJson(message, typeof(TwitchCreateRewardResponse));
-        Debug.Log($"Reward with id {result.GetData().id} was successfully created!");
+        var response = await twitchWebRequests.CreateRewardAwaitable(title, cost);        
+        if (response.responseCode == TwitchResponseCode.OK)
+        {
+            TwitchCreateRewardResponse result = (TwitchCreateRewardResponse)JsonUtility.FromJson(response.responseBody, typeof(TwitchCreateRewardResponse));
+            Debug.Log($"Reward with id {result.GetData().id} was successfully created!");
+        }        
     }  
 }
 ```

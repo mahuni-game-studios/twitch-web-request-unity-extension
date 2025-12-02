@@ -26,6 +26,7 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
     public Button createRewardButton, deleteRewardButton;
     public GameObject rewardBlocker;
     private string rewardId;
+    private TwitchWebRequests twitchWebRequests;
     
     /// <summary>
     /// Start is called on the frame when a script is enabled just before any of the Update methods are called for the first time.
@@ -53,8 +54,8 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
         TwitchWebRequestAuthentication.OnAuthenticated += OnAuthenticated;
         TwitchWebRequestAuthentication.ConnectionInformation infos = new(twitchClientIdText.text, new List<string>(){TwitchWebRequestAuthentication.ConnectionInformation.CHANNEL_MANAGE_REDEMPTIONS});
         TwitchWebRequestAuthentication.StartAuthenticationValidation(this, infos);
-        
-        TwitchWebRequests.Initialize(channelNameText.text);
+
+        twitchWebRequests = new TwitchWebRequests(channelNameText.text);
     }
 
     /// <summary>
@@ -63,7 +64,7 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
     /// <param name="success">True if authentication was successful</param>
     private void OnAuthenticated(bool success)
     {
-        if(success) authenticationDescriptionText.text = "<color=\"green\">Authentication successful!";
+        if (success) authenticationDescriptionText.text = "<color=\"green\">Authentication successful!";
         else authenticationDescriptionText.text = "<color=\"red\">Authentication failed!";
         resetAuthenticationButton.interactable = success;
         ValidateFields();
@@ -87,65 +88,68 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
     /// <summary>
     /// The create reward button was clicked by the user
     /// </summary>
-    private void OnCreateRewardButtonClicked()
+    private async void OnCreateRewardButtonClicked()
     {
-        long.TryParse(rewardCostText.text, out long cost);
-        StartCoroutine(TwitchWebRequests.CreateReward(rewardTitleText.text, cost, CreateRewardCallback));
-    }
-
-    /// <summary>
-    /// Callback when the reward creation is completed
-    /// </summary>
-    private void CreateRewardCallback(TwitchResponseCode code, string message)
-    {
-        if (code != TwitchResponseCode.OK)
+        if (rewardTitleText.text.Length > 45)
         {
-            rewardResultText.text = "<color=\"red\">Error occured for creating a reward: " + code;
+            rewardResultText.text = "<color=\"red\">The maximum length of a reward is 45 characters.!";
+            Debug.LogError(rewardResultText.text);
+            return;
+        }
+        
+        long.TryParse(rewardCostText.text, out long cost);
+        if (cost < 1)
+        {
+            rewardResultText.text = "<color=\"red\">The minimum cost of a reward is 1.";
+            Debug.LogError(rewardResultText.text);
+            return;
+        }
+        
+        (TwitchResponseCode responseCode, string responseBody) response = await twitchWebRequests.CreateReward(rewardTitleText.text, cost);
+        
+        if (response.responseCode == TwitchResponseCode.OK)
+        {
+            TwitchCreateRewardResponse result = (TwitchCreateRewardResponse)JsonUtility.FromJson(response.responseBody, typeof(TwitchCreateRewardResponse));
+            rewardId = result.GetData().id;
+        
+            rewardResultText.text = "<color=\"green\">Reward created!";
+            Debug.Log(rewardResultText.text);
+        }
+        else
+        {
+            rewardResultText.text = "<color=\"red\">Error occured for creating a reward: " + response.responseCode;
 
             // Give additional hint that this might be due to reward already present in 
-            if (code == TwitchResponseCode.BAD_REQUEST)
+            if (response.responseCode == TwitchResponseCode.BAD_REQUEST)
             {
                 rewardResultText.text += " You might have this reward already created, then please delete from Twitch website.";
             }
             
             Debug.LogError(rewardResultText.text);
-            return;
         }
-
-        TwitchCreateRewardResponse result = (TwitchCreateRewardResponse)JsonUtility.FromJson(message, typeof(TwitchCreateRewardResponse));
-        rewardId = result.GetData().id;
-        
-        rewardResultText.text = "<color=\"green\">Reward created!";
-        Debug.Log(rewardResultText.text);
     }
 
     /// <summary>
     /// The delete reward button was clicked by the user
     /// </summary>
-    private void OnDeleteRewardButtonClicked()
+    private async void OnDeleteRewardButtonClicked()
     {
-        TwitchWebRequests.Initialize(channelNameText.text);
-        StartCoroutine(TwitchWebRequests.DeleteReward(rewardId, DeleteRewardCallback));
-    }
+        TwitchResponseCode responseCode = await twitchWebRequests.DeleteReward(rewardId);
 
-    /// <summary>
-    /// Callback when the reward deletion is completed
-    /// </summary>
-    private void DeleteRewardCallback(TwitchResponseCode code)
-    {
         // Reading the documentation, we see that code 204 actually means deletion was a success
-        if (code != TwitchResponseCode.NO_CONTENT)
+        if (responseCode == TwitchResponseCode.NO_CONTENT)
         {
-            rewardResultText.text = $"<color=\"red\">Error occured for deleting a reward with id {rewardId}: {code}";
-            Debug.LogError(rewardResultText.text);
-            return;
-        }
-
-        rewardResultText.text = "<color=\"green\">Reward deleted!";
-        Debug.Log(rewardResultText.text);
+            rewardResultText.text = "<color=\"green\">Reward deleted!";
+            Debug.Log(rewardResultText.text);
         
-        rewardId = string.Empty;
-        ValidateFields();
+            rewardId = string.Empty;
+            ValidateFields();
+        }
+        else
+        {
+            rewardResultText.text = $"<color=\"red\">Error occured for deleting a reward with id {rewardId}: {responseCode}";
+            Debug.LogError(rewardResultText.text);
+        }
     }
 
     #endregion

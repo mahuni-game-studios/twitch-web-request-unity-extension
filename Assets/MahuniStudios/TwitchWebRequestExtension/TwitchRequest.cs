@@ -60,7 +60,7 @@ namespace Mahuni.Twitch.Extension
         /// <returns>The Unity web request object for a GET request</returns>
         private static UnityWebRequest CreateGetRequest(string uri)
         {
-            if (LOG) Debug.Log($"TwitchRequest: Get '{uri}'...");
+            LogRequest("GET", BuildURL(uri), false);
             UnityWebRequest webRequest = UnityWebRequest.Get(BuildURL(uri));
             webRequest.SetDefaultHeaders();
             return webRequest;
@@ -112,7 +112,7 @@ namespace Mahuni.Twitch.Extension
         /// <returns>The Unity web request object for a POST request</returns>
         private static UnityWebRequest CreatePostRequest(string uri, string jsonContent)
         {
-            if (LOG) Debug.Log($"TwitchRequest: Post '{uri}' with JSON content '{jsonContent}'...");
+            LogRequest("POST", BuildURL(uri), true, jsonContent);
             UnityWebRequest webRequest = UnityWebRequest.Post(BuildURL(uri), jsonContent, "application/json");
             webRequest.SetDefaultHeaders();
             webRequest.SetRequestHeader(HEADER_CLIENT_CONTENT_TYPE, "application/json");
@@ -184,27 +184,27 @@ namespace Mahuni.Twitch.Extension
         /// <returns>null</returns>
         public static IEnumerator Delete(string uri, Action<TwitchResponseCode> callback)
         {
-            yield return SyncRequest(CreateDeleteRequest(uri), callback);
+            yield return SyncRequestSimple(CreateDeleteRequest(uri), callback);
         }
         
         /// <summary>
         /// Communicate to the Twitch API using HTTP DELETE asynchronous
         /// </summary>
         /// <param name="uri">The URI of the resource to retrieve via HTTP DELETE</param>
-        /// <returns>The result of the HTTP DELETE request, containing the response code and the response body</returns>
-        public static async Task<(TwitchResponseCode responseCode, string responseBody)> AsyncDelete(string uri)
+        /// <returns>The result of the HTTP DELETE request, containing the response code</returns>
+        public static async Task<TwitchResponseCode> AsyncDelete(string uri)
         {
-            return await AsyncRequest(CreateDeleteRequest(uri));
+            return await AsyncRequestSimple(CreateDeleteRequest(uri));
         }
         
         /// <summary>
         /// Communicate to the Twitch API using HTTP DELETE using awaitable to be asynchronous
         /// </summary>
         /// <param name="uri">The URI of the resource to retrieve via HTTP DELETE</param>
-        /// <returns>The result of the HTTP DELETE request, containing the response code and the response body</returns>
-        public static async Awaitable<(TwitchResponseCode responseCode, string responseBody)> AwaitableDelete(string uri)
+        /// <returns>The result of the HTTP DELETE request, containing the response code</returns>
+        public static async Awaitable<TwitchResponseCode> AwaitableDelete(string uri)
         {
-            return await AwaitableRequest(CreateDeleteRequest(uri));
+            return await AwaitableRequestSimple(CreateDeleteRequest(uri));
         }
         
         /// <summary>
@@ -214,7 +214,7 @@ namespace Mahuni.Twitch.Extension
         /// <returns>The Unity web request object for a DELETE request</returns>
         private static UnityWebRequest CreateDeleteRequest(string uri)
         {
-            if (LOG) Debug.Log($"TwitchRequest: Delete '{uri}'...");
+            LogRequest("DELETE", BuildURL(uri), false);
             UnityWebRequest webRequest = UnityWebRequest.Delete(BuildURL(uri));
             webRequest.SetDefaultHeaders();
             return webRequest;
@@ -266,7 +266,7 @@ namespace Mahuni.Twitch.Extension
         /// <returns>The Unity web request object for a PATCH request</returns>
         private static UnityWebRequest CreatePatchRequest(string uri, string jsonContent)
         {
-            if (LOG) Debug.Log($"TwitchRequest: Patch '{uri}' with JSON content '{jsonContent}'...");
+            LogRequest("PATCH", BuildURL(uri), true, jsonContent);
             UnityWebRequest webRequest = UnityWebRequest.Put(BuildURL(uri), jsonContent);
             webRequest.SetDefaultHeaders();
             webRequest.method = "PATCH";
@@ -278,41 +278,98 @@ namespace Mahuni.Twitch.Extension
 
         #region Helpers
 
-        private static IEnumerator SyncRequest(UnityWebRequest webRequest, Action<TwitchResponseCode> callback)
+        /// <summary>
+        /// Synchronous simple web request, returning only the response code as callback
+        /// </summary>
+        /// <param name="webRequest">The web request to send</param>
+        /// <param name="callback">The callback to invoke</param>
+        /// <returns>null</returns>
+        private static IEnumerator SyncRequestSimple(UnityWebRequest webRequest, Action<TwitchResponseCode> callback)
         {
             yield return webRequest.SendWebRequest();
-            LogOnError(webRequest);
+            LogResponse(webRequest);
             callback.Invoke((TwitchResponseCode)webRequest.responseCode);
         }
         
+        /// <summary>
+        /// Synchronous web request, returning the response code and response body as callback
+        /// </summary>
+        /// <param name="webRequest">The web request to send</param>
+        /// <param name="callback">The callback to invoke</param>
+        /// <returns>null</returns>
         private static IEnumerator SyncRequest(UnityWebRequest webRequest, Action<TwitchResponseCode, string> callback)
         {
             yield return webRequest.SendWebRequest();
-            LogOnError(webRequest);
+            LogResponse(webRequest);
             callback.Invoke((TwitchResponseCode)webRequest.responseCode, webRequest.result == UnityWebRequest.Result.Success ? webRequest.downloadHandler.text : webRequest.error);
         }
         
+        /// <summary>
+        /// Asynchronous simple web request using Tasks
+        /// </summary>
+        /// <param name="webRequest">The web request to send</param>
+        /// <returns>The response code of the request</returns>
+        private static async Task<TwitchResponseCode> AsyncRequestSimple(UnityWebRequest webRequest)
+        {
+            using UnityWebRequest request = webRequest;
+            await request.SendWebRequest();
+            LogResponse(webRequest);
+            return (TwitchResponseCode)webRequest.responseCode;
+        }
+        
+        /// <summary>
+        /// Asynchronous web request using Tasks
+        /// </summary>
+        /// <param name="webRequest">The web request to send</param>
+        /// <returns>The response code and response body of the request</returns>
         private static async Task<(TwitchResponseCode responseCode, string responseBody)> AsyncRequest(UnityWebRequest webRequest)
         {
             using UnityWebRequest request = webRequest;
             await request.SendWebRequest();
-            LogOnError(webRequest);
+            LogResponse(webRequest);
             return ((TwitchResponseCode)webRequest.responseCode, webRequest.result == UnityWebRequest.Result.Success ? webRequest.downloadHandler.text : webRequest.error);
         }
         
+        /// <summary>
+        /// Asynchronous simple web request using Awaitable
+        /// </summary>
+        /// <param name="webRequest">The web request to send</param>
+        /// <returns>The response code of the request</returns>
+        private static async Awaitable<TwitchResponseCode> AwaitableRequestSimple(UnityWebRequest webRequest)
+        {
+            using UnityWebRequest request = webRequest;
+            await request.SendWebRequest();
+            LogResponse(webRequest);
+            return ((TwitchResponseCode)webRequest.responseCode);
+        }
+        
+        /// <summary>
+        /// Asynchronous web request using Awaitable
+        /// </summary>
+        /// <param name="webRequest">The web request to send</param>
+        /// <returns>The response code and response body of the request</returns>
         private static async Awaitable<(TwitchResponseCode responseCode, string responseBody)> AwaitableRequest(UnityWebRequest webRequest)
         {
             using UnityWebRequest request = webRequest;
             await request.SendWebRequest();
-            LogOnError(webRequest);
+            LogResponse(webRequest);
             return ((TwitchResponseCode)webRequest.responseCode, webRequest.result == UnityWebRequest.Result.Success ? webRequest.downloadHandler.text : webRequest.error);
         }
 
-        private static string BuildURL(string uri)
+        /// <summary>
+        /// Combine the URL with the passed appendix
+        /// </summary>
+        /// <param name="appendix">The appendix to append at the end of the URL</param>
+        /// <returns>The combined URL</returns>
+        private static string BuildURL(string appendix)
         {
-            return URL + uri;
+            return URL + appendix;
         }
 
+        /// <summary>
+        /// Set the headers of the request with default values
+        /// </summary>
+        /// <param name="webRequest">The web request with the updated headers</param>
         private static void SetDefaultHeaders(this UnityWebRequest webRequest)
         {
             webRequest.timeout = REQUEST_TIMEOUT;
@@ -320,15 +377,44 @@ namespace Mahuni.Twitch.Extension
             webRequest.SetRequestHeader(HEADER_TOKEN, GetToken());
         }
 
+        /// <summary>
+        /// Get the authentication token from the storage, formatted to be used in request headers
+        /// </summary>
+        /// <returns>The authentication token from the storage</returns>
         private static string GetToken()
         {
             return "Bearer " + TwitchLocalStorage.GetToken();
         }
 
-        private static void LogOnError(UnityWebRequest request)
+        /// <summary>
+        /// Log the send request, if the static <see cref="LOG"/> is set to true
+        /// </summary>
+        /// <param name="requestType">The type of request (e.g. POST, GET etc.)</param>
+        /// <param name="url">The URL that is being used</param>
+        /// <param name="hasJsonContent">True if the request sends JSON content</param>
+        /// <param name="content">The JSON content, only sent if <paramref name="hasJsonContent"/> is true</param>
+        private static void LogRequest(string requestType, string url, bool hasJsonContent, string content = "")
         {
-            if (request.result == UnityWebRequest.Result.Success) return;
-            if (LOG) Debug.LogError($"TwitchRequest: ERROR from {request.method} method: '{request.error}', {request.result}, Response code: {(TwitchResponseCode)request.responseCode}");
+            if (!LOG) return;
+            string json = hasJsonContent ? $" with JSON content '{content}" : "";
+            Debug.Log($"Send {requestType}: '{url}'{json}'...");
+        }
+
+        /// <summary>
+        /// Log the received request
+        /// </summary>
+        /// <param name="request">The request that was received</param>
+        private static void LogResponse(UnityWebRequest request)
+        {
+            if (!LOG) return;
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                Debug.Log($"Receive {request.method}: {(TwitchResponseCode)request.responseCode} from '{request.url}'!");
+            }
+            else
+            {
+                Debug.LogError($"Receive {request.method}: {(TwitchResponseCode)request.responseCode} from '{request.url} - Error: '{request.error}', Result: {request.result}");
+            }
         }
         
         #endregion
