@@ -1,6 +1,7 @@
 # Unity Twitch Web Request Extension by Mahuni Game Studios
 
-[![Downloads](https://img.shields.io/github/downloads/mahuni-game-studios/twitch-web-request-unity-extension/total.svg)](https://github.com/mahuni-game-studios/twitch-web-request-unity-extension/releases/) [![Latest Version](https://img.shields.io/github/v/release/mahuni-game-studios/twitch-web-request-unity-extension)](https://github.com/mahuni-game-studios/twitch-web-request-unity-extension/releases/tag/v1.0)
+[![Downloads](https://img.shields.io/github/downloads/mahuni-game-studios/twitch-web-request-unity-extension/total.svg)](https://github.com/mahuni-game-studios/twitch-web-request-unity-extension/releases/)
+[![Latest Version](https://img.shields.io/github/v/release/mahuni-game-studios/twitch-web-request-unity-extension)](https://github.com/mahuni-game-studios/twitch-web-request-unity-extension/releases/tag/v1.0)
 
 An extension to use the Twitch API directly via Unity web requests. Including authorization and local storage of the token and an example implementation showing reward creation / deletion via web request.
 
