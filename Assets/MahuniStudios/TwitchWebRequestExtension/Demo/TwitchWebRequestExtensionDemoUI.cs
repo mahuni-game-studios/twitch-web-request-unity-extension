@@ -34,6 +34,7 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
     /// </summary>
     private void Start()
     {
+        TwitchWebRequestAuthentication.OnAuthenticated += OnAuthenticated;
         authenticateButton.onClick.AddListener(OnAuthenticationButtonClicked);
         resetAuthenticationButton.onClick.AddListener(OnResetAuthenticationButtonClicked);
         createRewardButton.onClick.AddListener(OnCreateRewardButtonClicked);
@@ -52,12 +53,8 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
     private void OnAuthenticationButtonClicked()
     {
         authenticationDescriptionText.text = "<color=\"orange\">Authentication ongoing...";
-        
-        TwitchWebRequestAuthentication.OnAuthenticated += OnAuthenticated;
         TwitchWebRequestAuthentication.ConnectionInformation infos = new(twitchClientIdText.text, new List<string>(){TwitchWebRequestAuthentication.ConnectionInformation.CHANNEL_MANAGE_REDEMPTIONS});
         TwitchWebRequestAuthentication.StartAuthenticationValidation(this, infos);
-
-        twitchWebRequests = new TwitchWebRequests(channelNameText.text);
     }
 
     /// <summary>
@@ -66,8 +63,16 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
     /// <param name="success">True if authentication was successful</param>
     private void OnAuthenticated(bool success)
     {
-        if (success) authenticationDescriptionText.text = "<color=\"green\">Authentication successful!";
-        else authenticationDescriptionText.text = "<color=\"red\">Authentication failed!";
+        if (success)
+        {
+            authenticationDescriptionText.text = "<color=\"green\">Authentication successful!";
+            twitchWebRequests = new TwitchWebRequests(channelNameText.text);
+        }
+        else
+        {
+            authenticationDescriptionText.text = "<color=\"red\">Authentication failed!";
+        }
+        
         resetAuthenticationButton.interactable = success;
         ValidateFields();
     }

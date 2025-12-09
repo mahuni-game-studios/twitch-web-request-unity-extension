@@ -71,17 +71,15 @@ namespace Mahuni.Twitch.Extension
         private static IEnumerator UpdateAuthenticationStatus(ConnectionInformation connectionInformation)
         {
             httpListener = new HttpListener();
-            httpListener.Prefixes.Add("http://localhost/");
-            httpListener.Prefixes.Add("http://127.0.0.1/");
+            httpListener.Prefixes.Add($"http://*:{new Uri(connectionInformation.redirectUrl).Port}/");
             httpListener.AuthenticationSchemes = AuthenticationSchemes.Anonymous;
             httpListener.Start();
-
+            
             httpListenerThread = new Thread(HttpListenerThread);
             httpListenerThread.Start();
 
-            // You can also use another browser than Microsoft Edge, just be sure to NOT use Firefox, as it does not work
-            Application.OpenURL("microsoft-edge:" + GetAuthenticationURL(connectionInformation));
-
+            Application.OpenURL(GetAuthenticationURL(connectionInformation));
+            
             float processStartTime = Time.realtimeSinceStartup;
             while (authenticationStatus != AuthenticationStatus.Authenticated)
             {
@@ -108,7 +106,7 @@ namespace Mahuni.Twitch.Extension
         private static void HttpListenerThread()
         {
             authenticationStatus = AuthenticationStatus.Waiting;
-            while (httpListenerThread.IsAlive)
+            while (httpListenerThread != null && httpListenerThread.IsAlive && httpListener != null && httpListener.IsListening)
             {
                 if (authenticationStatus == AuthenticationStatus.Authenticated) return;
                 IAsyncResult result = httpListener?.BeginGetContext(GetHttpContextCallback, httpListener);
