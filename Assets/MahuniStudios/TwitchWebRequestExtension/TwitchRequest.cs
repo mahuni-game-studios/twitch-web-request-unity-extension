@@ -20,7 +20,7 @@ namespace Mahuni.Twitch.Extension
         private const int REQUEST_TIMEOUT = 10;
         
         private static readonly bool DebugRequests = true;
-        private static readonly bool DebugResponseContent = false;
+        private static readonly bool DebugResponseContent = true;
 
         #region Get
         
@@ -62,7 +62,7 @@ namespace Mahuni.Twitch.Extension
         /// <returns>The Unity web request object for a GET request</returns>
         private static UnityWebRequest CreateGetRequest(string uri)
         {
-            LogRequest("GET", BuildURL(uri), false);
+            LogRequest(UnityWebRequest.kHttpVerbGET, BuildURL(uri), false);
             UnityWebRequest webRequest = UnityWebRequest.Get(BuildURL(uri));
             webRequest.SetDefaultHeaders();
             return webRequest;
@@ -114,7 +114,7 @@ namespace Mahuni.Twitch.Extension
         /// <returns>The Unity web request object for a POST request</returns>
         private static UnityWebRequest CreatePostRequest(string uri, string jsonContent)
         {
-            LogRequest("POST", BuildURL(uri), true, jsonContent);
+            LogRequest(UnityWebRequest.kHttpVerbPOST, BuildURL(uri), true, jsonContent);
             UnityWebRequest webRequest = UnityWebRequest.Post(BuildURL(uri), jsonContent, "application/json");
             webRequest.SetDefaultHeaders();
             webRequest.SetRequestHeader(HEADER_CLIENT_CONTENT_TYPE, "application/json");
@@ -167,7 +167,7 @@ namespace Mahuni.Twitch.Extension
         /// <returns>The Unity web request object for a PUT request</returns>
         private static UnityWebRequest CreatePutRequest(string uri, string jsonContent)
         {
-            if (DebugRequests) Debug.Log($"TwitchRequest: Put '{uri}'...");
+            LogRequest(UnityWebRequest.kHttpVerbPUT, BuildURL(uri), true, jsonContent);
             UnityWebRequest webRequest = UnityWebRequest.Put(BuildURL(uri), jsonContent);
             webRequest.SetDefaultHeaders();
             webRequest.SetRequestHeader(HEADER_CLIENT_CONTENT_TYPE, "application/json");
@@ -216,7 +216,7 @@ namespace Mahuni.Twitch.Extension
         /// <returns>The Unity web request object for a DELETE request</returns>
         private static UnityWebRequest CreateDeleteRequest(string uri)
         {
-            LogRequest("DELETE", BuildURL(uri), false);
+            LogRequest(UnityWebRequest.kHttpVerbDELETE, BuildURL(uri), false);
             UnityWebRequest webRequest = UnityWebRequest.Delete(BuildURL(uri));
             webRequest.SetDefaultHeaders();
             return webRequest;
@@ -375,7 +375,7 @@ namespace Mahuni.Twitch.Extension
         private static void SetDefaultHeaders(this UnityWebRequest webRequest)
         {
             webRequest.timeout = REQUEST_TIMEOUT;
-            webRequest.SetRequestHeader(HEADER_CLIENT_ID, TwitchWebRequestAuthentication.Connection.twitchClientId);
+            webRequest.SetRequestHeader(HEADER_CLIENT_ID, TwitchAuthentication.Connection.twitchClientId);
             webRequest.SetRequestHeader(HEADER_TOKEN, GetToken());
         }
 
@@ -385,7 +385,7 @@ namespace Mahuni.Twitch.Extension
         /// <returns>The authentication token from the storage</returns>
         private static string GetToken()
         {
-            return "Bearer " + TwitchLocalStorage.GetToken();
+            return "Bearer " + TwitchAuthentication.GetToken();
         }
 
         /// <summary>
