@@ -34,7 +34,7 @@ public class YourUnityClass : MonoBehaviour
         TwitchAuthentication.OnAuthenticated += OnAuthenticated;
         
         // Set relevant information to the connection
-        TwitchAuthentication.ConnectionInformation infos = new("your-client-id", new List<string>(){TwitchWebRequestAuthentication.ConnectionInformation.CHANNEL_MANAGE_REDEMPTIONS});
+        TwitchAuthentication.ConnectionInformation infos = new("your-client-id", new List<string>(){TwitchAuthentication.ConnectionInformation.CHANNEL_MANAGE_REDEMPTIONS});
         
         // Start authentication
         TwitchAuthentication.StartAuthenticationValidation(this, infos);
@@ -57,7 +57,7 @@ Please note that creating a reward and any other calls to use the Twitch API onl
 ```cs
 public class YourUnityClass : MonoBehaviour
 {
-    private TwitchWebRequests twitchWebRequests;
+    private TwitchWebRequestHandler twitchWebRequests;
     
     private void Start()
     { 
@@ -67,7 +67,7 @@ public class YourUnityClass : MonoBehaviour
     
     private async void ConnectTwitchWebRequests()
     {
-        twitchWebRequests = new TwitchWebRequests("channel-name");
+        twitchWebRequests = new TwitchWebRequestHandler("channel-name");
         bool success = await twitchWebRequests.Connect(channelNameText.text);
         if (success)
         {
