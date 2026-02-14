@@ -4,6 +4,9 @@ namespace Mahuni.Twitch.Extension
 {
     using System;
     using UnityEngine;
+    using System.Collections.Generic;
+    using System.Linq;
+    using Newtonsoft.Json.Linq;
 
     /// <summary>
     /// Perform web requests targeting the Twitch API
@@ -75,12 +78,17 @@ namespace Mahuni.Twitch.Extension
         /// Creates a Custom Reward in the broadcaster’s channel.
         /// <see href="https://dev.twitch.tv/docs/api/reference/#create-custom-rewards">Official documentation</see>
         /// </summary>
-        /// <param name="title">The custom reward’s title. The title may contain a maximum of 45 characters, and  must be unique amongst the broadcaster’s custom rewards.</param>
-        /// <param name="cost">The cost of the reward, in Channel Points. The minimum is 1 point.</param>
+        /// <param name="rewardTitle">The custom reward’s title. The title may contain a maximum of 45 characters, and  must be unique amongst the broadcaster’s custom rewards.</param>
+        /// <param name="rewardCost">The cost of the reward, in Channel Points. The minimum is 1 point.</param>
         /// <returns>Awaitable response code and response body from requesting to create a reward</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> CreateReward(string title, long cost)
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> CreateReward(string rewardTitle, long rewardCost)
         {
-            return await TwitchRequest.AwaitablePost("channel_points/custom_rewards?broadcaster_id=" + BroadcasterID, $"{{\"title\":\"{title}\",\"cost\":{cost}}}");
+            JObject jsonObject = JObject.FromObject(new
+            {
+                title = rewardTitle,
+                cost = rewardCost 
+            });
+            return await TwitchRequest.AwaitablePost("channel_points/custom_rewards?broadcaster_id=" + BroadcasterID, jsonObject.ToString());
         }
         
         /// <summary>
@@ -94,6 +102,51 @@ namespace Mahuni.Twitch.Extension
             return await TwitchRequest.AwaitableDelete($"channel_points/custom_rewards?broadcaster_id={BroadcasterID}&id={rewardId}");
         }
         
+        #endregion
+
+        #region Prediction Requests
+
+        /// <summary>
+        /// Creates a prediction
+        /// </summary>
+        /// <param name="predictionTitle">The title of the prediction</param>
+        /// <param name="outcomeTitles">All possible outcomes</param>
+        /// <param name="durationSeconds">The duration of the prediction until it becomes locked. The minimum is 30 seconds and the maximum is 1800 seconds (30 minutes)</param>
+        /// <returns>Awaitable response code from requesting to create a prediction</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> CreatePrediction(string predictionTitle, string[] outcomeTitles, int durationSeconds = 30)
+        {
+            IEnumerable<JObject> predictionOutcomes = outcomeTitles.Select(outcomeTitle => JObject.FromObject(new { title = outcomeTitle }));
+            JObject jsonObject = JObject.FromObject(new
+            {
+                broadcaster_id = BroadcasterID,
+                title = predictionTitle,
+                outcomes = predictionOutcomes,
+                prediction_window = durationSeconds
+            });
+            
+            return await TwitchRequest.AwaitablePost("predictions", jsonObject.ToString());
+        }
+        
+        /// <summary>
+        /// Resolve a locked prediction
+        /// </summary>
+        /// <param name="predictionId">The ID of the prediction to solve</param>
+        /// <param name="winningOutcomeId">The ID of the predictions winning outcome</param>
+        /// <param name="status">The status to set the prediction to</param>
+        /// <returns>Awaitable response code from requesting to resolve a prediction</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> ResolvePrediction(string predictionId, string winningOutcomeId, Prediction.Status status = Prediction.Status.RESOLVED)
+        {
+            JObject jsonObject = JObject.FromObject(new
+            {
+                broadcaster_id = BroadcasterID,
+                id = predictionId,
+                status = status.ToString(),
+                winning_outcome_id = winningOutcomeId
+            });
+            
+            return await TwitchRequest.AwaitablePatch("predictions", jsonObject.ToString());
+        }
+
         #endregion
     }
 }

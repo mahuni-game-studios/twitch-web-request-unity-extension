@@ -106,4 +106,29 @@ namespace Mahuni.Twitch.Extension
             public long global_cooldown_seconds;
         }
     }
+
+    // See https://dev.twitch.tv/docs/api/reference/#create-prediction
+    [Serializable]
+    public class Prediction
+    {
+        public string id;
+        public string title;
+        public string winning_outcome_id;
+        public Outcome[] outcomes;
+        public string status;
+
+        public enum Status
+        {
+            ACTIVE, CANCELLED, LOCKED, RESOLVED
+        }
+
+        [Serializable]
+        public class Outcome
+        {
+            public string id;
+            public string title;
+            public int users;
+            public int channel_points;
+        }
+    }
 }
