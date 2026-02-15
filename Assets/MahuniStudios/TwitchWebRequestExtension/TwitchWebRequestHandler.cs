@@ -47,6 +47,11 @@ namespace Mahuni.Twitch.Extension
             return true;
         }
 
+        public void Disconnect()
+        {
+            BroadcasterID = string.Empty;
+        }
+
         #region Users
 
         /// <summary>
