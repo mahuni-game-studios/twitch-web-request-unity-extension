@@ -110,6 +110,15 @@ namespace Mahuni.Twitch.Extension
         #endregion
 
         #region Prediction Requests
+        
+        /// <summary>
+        /// Get the predictions
+        /// </summary>
+        /// <returns>Awaitable response code and body from requesting the prediction list</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> GetPredictions()
+        {
+            return await TwitchRequest.AwaitableGet($"predictions?broadcaster_id={BroadcasterID}");
+        }
 
         /// <summary>
         /// Creates a prediction
@@ -117,7 +126,7 @@ namespace Mahuni.Twitch.Extension
         /// <param name="predictionTitle">The title of the prediction</param>
         /// <param name="outcomeTitles">All possible outcomes</param>
         /// <param name="durationSeconds">The duration of the prediction until it becomes locked. The minimum is 30 seconds and the maximum is 1800 seconds (30 minutes)</param>
-        /// <returns>Awaitable response code from requesting to create a prediction</returns>
+        /// <returns>Awaitable response code and body from requesting to create a prediction</returns>
         public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> CreatePrediction(string predictionTitle, string[] outcomeTitles, int durationSeconds = 30)
         {
             IEnumerable<JObject> predictionOutcomes = outcomeTitles.Select(outcomeTitle => JObject.FromObject(new { title = outcomeTitle }));
@@ -138,7 +147,7 @@ namespace Mahuni.Twitch.Extension
         /// <param name="predictionId">The ID of the prediction to solve</param>
         /// <param name="winningOutcomeId">The ID of the predictions winning outcome</param>
         /// <param name="status">The status to set the prediction to</param>
-        /// <returns>Awaitable response code from requesting to resolve a prediction</returns>
+        /// <returns>Awaitable response code and body from requesting to resolve a prediction</returns>
         public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> ResolvePrediction(string predictionId, string winningOutcomeId, Prediction.Status status = Prediction.Status.RESOLVED)
         {
             JObject jsonObject = JObject.FromObject(new
