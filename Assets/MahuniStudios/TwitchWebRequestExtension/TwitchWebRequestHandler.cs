@@ -145,7 +145,7 @@ namespace Mahuni.Twitch.Extension
         /// Resolve a locked prediction
         /// </summary>
         /// <param name="predictionId">The ID of the prediction to solve</param>
-        /// <param name="winningOutcomeId">The ID of the predictions winning outcome</param>
+        /// <param name="winningOutcomeId">The ID of the predictions winning outcome. Is optional when canceling</param>
         /// <param name="status">The status to set the prediction to</param>
         /// <returns>Awaitable response code and body from requesting to resolve a prediction</returns>
         public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> ResolvePrediction(string predictionId, string winningOutcomeId, Prediction.Status status = Prediction.Status.RESOLVED)

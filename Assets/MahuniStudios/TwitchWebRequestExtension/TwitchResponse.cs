@@ -119,7 +119,7 @@ namespace Mahuni.Twitch.Extension
 
         public enum Status
         {
-            ACTIVE, CANCELLED, LOCKED, RESOLVED
+            ACTIVE, CANCELED, LOCKED, RESOLVED
         }
 
         [Serializable]
