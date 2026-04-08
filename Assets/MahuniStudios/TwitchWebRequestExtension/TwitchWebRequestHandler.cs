@@ -109,10 +109,70 @@ namespace Mahuni.Twitch.Extension
         
         #endregion
 
+        #region Poll Requests
+
+        /// <summary>
+        /// Get the polls
+        /// https://dev.twitch.tv/docs/api/reference/#get-polls
+        /// </summary>
+        /// <returns>Awaitable response code and body from requesting the polls list</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> GetPolls()
+        {
+            return await TwitchRequest.AwaitableGet($"polls?broadcaster_id={BroadcasterID}");
+        }
+
+        /// <summary>
+        /// Creates a poll
+        /// https://dev.twitch.tv/docs/api/reference/#create-poll
+        /// </summary>
+        /// <param name="pollTitle">The title of the poll</param>
+        /// <param name="choices">An array of poll options</param>
+        /// <param name="durationSeconds">The duration of the poll in seconds. Min = 30s, Max = 1800s</param>
+        /// <param name="enableChannelPointVoting">True to enable users spending channel points per vote</param>
+        /// <param name="channelPoints">The amount of channel points per additional vote (only works if boolean enableChannelPointVoting is set to true)</param>
+        /// <returns>>Awaitable response code and body from requesting to create a new poll</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> CreatePoll(string pollTitle, string[] choices, int durationSeconds = 15, bool enableChannelPointVoting = false, int channelPoints = 1)
+        {
+            IEnumerable<JObject> pollChoices = choices.Select(outcomeTitle => JObject.FromObject(new { title = outcomeTitle }));
+            JObject jsonObject = JObject.FromObject(new
+            {
+                broadcaster_id = BroadcasterID,
+                title = pollTitle,
+                choices = pollChoices,
+                duration = durationSeconds,
+                channel_points_voting_enabled = enableChannelPointVoting,
+                channel_points_per_vote =  channelPoints
+            });
+            
+            return await TwitchRequest.AwaitablePost("polls", jsonObject.ToString());
+        }
+       
+        /// <summary>
+        /// End a still active poll
+        /// https://dev.twitch.tv/docs/api/reference/#end-poll
+        /// </summary>
+        /// <param name="pollId">The ID of the poll</param>
+        /// <param name="pollStatus">The status to set the poll to (either TERMINATED or ARCHIVED)</param>
+        /// <returns>>Awaitable response code and body from requesting to end a poll</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> EndPoll(string pollId, Poll.Status pollStatus = Poll.Status.TERMINATED)
+        {
+            JObject jsonObject = JObject.FromObject(new
+            {
+                broadcaster_id = BroadcasterID,
+                id = pollId,
+                status = pollStatus.ToString()
+            });
+            
+            return await TwitchRequest.AwaitablePatch("polls", jsonObject.ToString());
+        }
+
+        #endregion
+
         #region Prediction Requests
         
         /// <summary>
         /// Get the predictions
+        /// https://dev.twitch.tv/docs/api/reference/#get-predictions
         /// </summary>
         /// <returns>Awaitable response code and body from requesting the prediction list</returns>
         public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> GetPredictions()
@@ -122,6 +182,7 @@ namespace Mahuni.Twitch.Extension
 
         /// <summary>
         /// Creates a prediction
+        /// https://dev.twitch.tv/docs/api/reference/#create-prediction
         /// </summary>
         /// <param name="predictionTitle">The title of the prediction</param>
         /// <param name="outcomeTitles">All possible outcomes</param>
@@ -143,6 +204,7 @@ namespace Mahuni.Twitch.Extension
         
         /// <summary>
         /// Resolve a locked prediction
+        /// https://dev.twitch.tv/docs/api/reference/#end-prediction
         /// </summary>
         /// <param name="predictionId">The ID of the prediction to solve</param>
         /// <param name="winningOutcomeId">The ID of the predictions winning outcome. Is optional when canceling</param>

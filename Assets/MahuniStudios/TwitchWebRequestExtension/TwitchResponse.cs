@@ -131,4 +131,35 @@ namespace Mahuni.Twitch.Extension
             public int channel_points;
         }
     }
+    
+    // See https://dev.twitch.tv/docs/api/reference/#create-poll
+    [Serializable]
+    public class Poll
+    {
+        public string title;
+        public string id;
+        public Choices[] choices;
+        public int duration;
+        public string started_at;
+        public string ended_at;
+        public bool channel_points_voting_enabled;
+        public int channel_points_per_vote;
+        //public bool bits_voting_enabled; //-> Not used according to documentation
+        //public int bits_per_vote; //-> Not used according to documentation
+        
+        public enum Status
+        {
+            ACTIVE, COMPLETED, TERMINATED, ARCHIVED, MODERATED, INVALID
+        }
+        
+        [Serializable]
+        public class Choices
+        {
+            public string id;
+            public string title;
+            public int votes;
+            public int channel_points_votes;
+            //public int bits_votes; //-> Not used according to documentation
+        }
+    }
 }
