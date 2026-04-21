@@ -146,6 +146,7 @@ namespace Mahuni.Twitch.Extension
         public int channel_points_per_vote;
         //public bool bits_voting_enabled; //-> Not used according to documentation
         //public int bits_per_vote; //-> Not used according to documentation
+        public string status;
         
         public enum Status
         {
@@ -160,6 +161,23 @@ namespace Mahuni.Twitch.Extension
             public int votes;
             public int channel_points_votes;
             //public int bits_votes; //-> Not used according to documentation
+
+            public Choices(){}
+            
+            public Choices(string id, string title, int votes, int channel_points_votes)
+            {
+                this.id = id;
+                this.title = title;
+                this.votes = votes;
+                this.channel_points_votes = channel_points_votes;
+            }
+        }
+
+        [Serializable]
+        public class ChannelPointsVoting
+        {
+            public bool isEnabled;
+            public int amountPerVote;
         }
     }
 }
