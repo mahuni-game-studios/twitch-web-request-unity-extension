@@ -78,20 +78,30 @@ namespace Mahuni.Twitch.Extension
         {
             return await TwitchRequest.AwaitableGet($"channel_points/custom_rewards?broadcaster_id={BroadcasterID}");
         }
-        
+
         /// <summary>
         /// Creates a Custom Reward in the broadcaster’s channel.
         /// <see href="https://dev.twitch.tv/docs/api/reference/#create-custom-rewards">Official documentation</see>
         /// </summary>
         /// <param name="rewardTitle">The custom reward’s title. The title may contain a maximum of 45 characters, and  must be unique amongst the broadcaster’s custom rewards.</param>
         /// <param name="rewardCost">The cost of the reward, in Channel Points. The minimum is 1 point.</param>
+        /// <param name="isUserInputRequired">A Boolean value that determines whether the user needs to enter information when redeeming the reward.</param>
+        /// <param name="redeemPrompt">The prompt shown to the viewer when they redeem the reward. Specify a prompt if is_user_input_required is true. The prompt is limited to a maximum of 200 characters.</param>
+        /// <param name="isCooldownEnabled">A Boolean value that determines whether to apply a cooldown period between redemptions.</param>
+        /// <param name="cooldownSeconds">The cooldown period, in seconds. Applied only if the is_global_cooldown_enabled field is true. The minimum value is 1; however, the minimum value is 60 for it to be shown in the Twitch UI.</param>
         /// <returns>Awaitable response code and response body from requesting to create a reward</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> CreateReward(string rewardTitle, long rewardCost)
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> CreateReward(string rewardTitle, long rewardCost, bool isUserInputRequired = false, string redeemPrompt = "",
+            bool isCooldownEnabled = false, int cooldownSeconds = 1)
         {
             JObject jsonObject = JObject.FromObject(new
             {
                 title = rewardTitle,
-                cost = rewardCost 
+                cost = rewardCost,
+                is_user_input_required = isUserInputRequired,
+                prompt = redeemPrompt,
+                is_global_cooldown_enabled = isCooldownEnabled,
+                global_cooldown_seconds = cooldownSeconds,
+                should_redemptions_skip_request_queue = true // By default, we want the request queue to be fulfilled straight away without additonal steps
             });
             return await TwitchRequest.AwaitablePost("channel_points/custom_rewards?broadcaster_id=" + BroadcasterID, jsonObject.ToString());
         }
