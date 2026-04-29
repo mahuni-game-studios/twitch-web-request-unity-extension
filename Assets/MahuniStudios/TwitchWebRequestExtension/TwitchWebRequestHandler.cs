@@ -101,9 +101,29 @@ namespace Mahuni.Twitch.Extension
                 prompt = redeemPrompt,
                 is_global_cooldown_enabled = isCooldownEnabled,
                 global_cooldown_seconds = cooldownSeconds,
-                should_redemptions_skip_request_queue = true // By default, we want the request queue to be fulfilled straight away without additonal steps
+                should_redemptions_skip_request_queue = true // By default, we want the request queue to be fulfilled straight away without additional steps
             });
             return await TwitchRequest.AwaitablePost("channel_points/custom_rewards?broadcaster_id=" + BroadcasterID, jsonObject.ToString());
+        }
+        
+        /// <summary>
+        /// Updates a custom reward that the specified broadcaster created.
+        /// <see href="https://dev.twitch.tv/docs/api/reference/#update-custom-reward">Official documentation</see>
+        /// <param name="reward">The reward to update</param>
+        /// </summary>
+        /// <returns>Awaitable response code and response body from requesting to get the users rewards</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> UpdateReward(Reward reward)
+        {
+            JObject jsonObject = JObject.FromObject(new
+            {
+                title = reward.title,
+                cost = reward.cost,
+                is_user_input_required = reward.is_user_input_required,
+                prompt = reward.prompt,
+                is_global_cooldown_enabled = reward.global_cooldown_setting.is_enabled,
+                global_cooldown_seconds = reward.global_cooldown_setting.global_cooldown_seconds
+            });
+            return await TwitchRequest.AwaitablePatch($"channel_points/custom_rewards?broadcaster_id={BroadcasterID}&id={reward.id}", jsonObject.ToString());
         }
         
         /// <summary>
