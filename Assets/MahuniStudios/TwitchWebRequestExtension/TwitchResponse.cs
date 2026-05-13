@@ -180,4 +180,17 @@ namespace Mahuni.Twitch.Extension
             public int amountPerVote;
         }
     }
+    
+    // See https://dev.twitch.tv/docs/api/reference/#get-ad-schedule
+    [Serializable]
+    public class AdSchedule
+    {
+        public int snooze_count;
+        public string snooze_refresh_at;
+        public string next_ad_at;
+        public int duration;
+        public string last_ad_at;
+        public int preroll_free_time;
+
+    }
 }

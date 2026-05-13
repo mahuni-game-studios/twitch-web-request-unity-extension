@@ -258,5 +258,29 @@ namespace Mahuni.Twitch.Extension
         }
 
         #endregion
+
+        #region Ads
+        
+        /// <summary>
+        /// Get the ad schedule
+        /// https://dev.twitch.tv/docs/api/reference/#get-ad-schedule
+        /// </summary>
+        /// <returns>Awaitable response code and body from requesting the ad schedule</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> GetAdSchedule()
+        {
+            return await TwitchRequest.AwaitableGet($"channels/ads?broadcaster_id={BroadcasterID}");
+        }
+        
+        /// <summary>
+        /// Snooze the next ad
+        /// https://dev.twitch.tv/docs/api/reference/#snooze-next-ad
+        /// </summary>
+        /// <returns>Awaitable response code and body from requesting to snooze the next ad</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> SnoozeNextAd()
+        {
+            return await TwitchRequest.AwaitablePost($"channels/ads/schedule/snooze?broadcaster_id={BroadcasterID}", new JObject().ToString());
+        }
+        
+        #endregion
     }
 }
