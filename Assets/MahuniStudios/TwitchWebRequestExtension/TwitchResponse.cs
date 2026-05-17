@@ -186,11 +186,10 @@ namespace Mahuni.Twitch.Extension
     public class AdSchedule
     {
         public int snooze_count;
-        public string snooze_refresh_at;
-        public string next_ad_at;
+        public long snooze_refresh_at;
+        public long next_ad_at;
         public int duration;
-        public string last_ad_at;
+        public long last_ad_at;
         public int preroll_free_time;
-
     }
 }
