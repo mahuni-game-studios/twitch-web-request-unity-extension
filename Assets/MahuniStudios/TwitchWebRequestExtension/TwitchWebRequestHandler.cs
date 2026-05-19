@@ -259,7 +259,7 @@ namespace Mahuni.Twitch.Extension
 
         #endregion
 
-        #region Ads
+        #region Ad Requests
         
         /// <summary>
         /// Get the ad schedule
@@ -279,6 +279,48 @@ namespace Mahuni.Twitch.Extension
         public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> SnoozeNextAd()
         {
             return await TwitchRequest.AwaitablePost($"channels/ads/schedule/snooze?broadcaster_id={BroadcasterID}", new JObject().ToString());
+        }
+        
+        #endregion
+
+        #region Chat Requests
+        
+        /// <summary>
+        /// Sends a message to the broadcaster’s chat room
+        /// https://dev.twitch.tv/docs/api/reference/#send-chat-message
+        /// </summary>
+        /// <param name="message">The message to send. The message is limited to a maximum of 500 characters</param>
+        /// <param name="pin">If true, the message will be sent and immediately pinned</param>
+        /// <returns>Awaitable response code and body from requesting to send a chat message</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> ChatSendMessage(string message, bool pin = false)
+        {
+            JObject jsonObject = JObject.FromObject(new
+            {
+                broadcaster_id = BroadcasterID,
+                sender_id = BroadcasterID,
+                message,
+                pin
+            });
+            
+            return await TwitchRequest.AwaitablePost($"chat/messages", jsonObject.ToString());
+        }
+        
+        /// <summary>
+        /// Sends an announcement to the broadcaster’s chat room
+        /// https://dev.twitch.tv/docs/api/reference/#send-chat-announcement
+        /// </summary>
+        /// <param name="message">The announcement to make in the broadcaster’s chat room. Announcements are limited to a maximum of 500 characters</param>
+        /// <param name="color">The color used to highlight the announcement</param>
+        /// <returns>Awaitable response code and body from requesting to send a chat announcement</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> ChatSendAnnouncement(string message, ChatColor color = ChatColor.primary)
+        {
+            JObject jsonObject = JObject.FromObject(new
+            {
+                message,
+                color = color.ToString()
+            });
+            
+            return await TwitchRequest.AwaitablePost($"chat/announcements?broadcaster_id={BroadcasterID}&moderator_id={BroadcasterID}", jsonObject.ToString());
         }
         
         #endregion

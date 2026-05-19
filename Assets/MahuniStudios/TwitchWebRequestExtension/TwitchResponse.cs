@@ -192,4 +192,25 @@ namespace Mahuni.Twitch.Extension
         public long last_ad_at;
         public int preroll_free_time;
     }
+
+    // See https://dev.twitch.tv/docs/api/reference/#send-chat-message
+    [Serializable]
+    public class ChatMessage
+    {
+        public string message_id;
+        public bool is_sent;
+        public DropReason drop_reason;
+
+        [Serializable]
+        public class DropReason
+        {
+            public string code;
+            public string message;
+        }
+    }
+
+    public enum ChatColor
+    {
+        primary, blue, green, orange, purple
+    }
 }
