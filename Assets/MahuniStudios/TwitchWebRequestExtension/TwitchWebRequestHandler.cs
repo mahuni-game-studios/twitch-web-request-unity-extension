@@ -27,13 +27,15 @@ namespace Mahuni.Twitch.Extension
             }
         }
 
+        #region Twitch Connection
+
         /// <summary>
         /// Initialize by logging into the channel
         /// </summary>
         /// <param name="channelName">The channel name to log in to</param>
         public async Awaitable<bool> Connect(string channelName)
         {
-            (TwitchResponseCode responseCode, string responseBody) response = await GetUser(channelName);
+            (TwitchResponseCode responseCode, User user) response = await GetUser(channelName);
             
             if (response.responseCode != TwitchResponseCode.OK)
             {
@@ -42,8 +44,7 @@ namespace Mahuni.Twitch.Extension
                 return false;
             }
 
-            User user = JsonUtility.FromJson<Data<User>>(response.responseBody).GetFirst();
-            BroadcasterID = user.id;
+            BroadcasterID = response.user.id;
             return true;
         }
 
@@ -51,6 +52,8 @@ namespace Mahuni.Twitch.Extension
         {
             BroadcasterID = string.Empty;
         }
+        
+        #endregion
 
         #region Users
 
@@ -60,9 +63,11 @@ namespace Mahuni.Twitch.Extension
         /// </summary>
         /// <param name="channelName">The channel name to get the user information from</param>
         /// <returns>Awaitable response code and response body from requesting to get the user with passed name</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> GetUser(string channelName)
+        public async Awaitable<(TwitchResponseCode responseCode, User user)> GetUser(string channelName)
         {
-            return await TwitchRequest.AwaitableGet($"users?login={channelName}");
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitableGet($"users?login={channelName}");
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<User>>(response.responseBody).GetFirst() : null);
         }
 
         #endregion
@@ -74,9 +79,18 @@ namespace Mahuni.Twitch.Extension
         /// <see href="https://dev.twitch.tv/docs/api/reference/#get-custom-reward">Official documentation</see>
         /// </summary>
         /// <returns>Awaitable response code and response body from requesting to get the users rewards</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> GetRewards()
+        public async Awaitable<(TwitchResponseCode responseCode, Dictionary<string, Reward> rewards)> GetRewards()
         {
-            return await TwitchRequest.AwaitableGet($"channel_points/custom_rewards?broadcaster_id={BroadcasterID}");
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitableGet($"channel_points/custom_rewards?broadcaster_id={BroadcasterID}");
+
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            Dictionary<string, Reward> rewards = new();
+            if (success)
+            {
+                rewards = JsonUtility.FromJson<Data<Reward>>(response.responseBody).data.ToDictionary(reward => reward.id);
+            }
+
+            return (response.responseCode, success ? rewards : null);
         }
 
         /// <summary>
@@ -92,7 +106,7 @@ namespace Mahuni.Twitch.Extension
         /// <param name="cooldownSeconds">The cooldown period, in seconds. Applied only if the is_global_cooldown_enabled field is true. The minimum value is 1; however, the minimum value is 60 for it to be shown in the Twitch UI.</param>
         /// <param name="customColorHex">The background color to use for the reward. Specify the color using Hex format (for example, #9147FF).</param>
         /// <returns>Awaitable response code and response body from requesting to create a reward</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> CreateReward(string rewardTitle, long rewardCost, bool automaticRedemption = true, bool isUserInputRequired = false, string redeemPrompt = "",
+        public async Awaitable<(TwitchResponseCode responseCode, Reward reward)> CreateReward(string rewardTitle, long rewardCost, bool automaticRedemption = true, bool isUserInputRequired = false, string redeemPrompt = "",
             bool isCooldownEnabled = false, int cooldownSeconds = 1, string customColorHex = null)
         {
             JObject jsonObject = JObject.FromObject(new
@@ -107,7 +121,11 @@ namespace Mahuni.Twitch.Extension
                 background_color = customColorHex,
                 should_redemptions_skip_request_queue = automaticRedemption
             });
-            return await TwitchRequest.AwaitablePost("channel_points/custom_rewards?broadcaster_id=" + BroadcasterID, jsonObject.ToString());
+            
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitablePost("channel_points/custom_rewards?broadcaster_id=" + BroadcasterID, jsonObject.ToString());
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<Reward>>(response.responseBody).GetFirst() : null);
         }
         
         /// <summary>
@@ -116,7 +134,7 @@ namespace Mahuni.Twitch.Extension
         /// <param name="reward">The reward to update</param>
         /// </summary>
         /// <returns>Awaitable response code and response body from requesting to get the users rewards</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> UpdateReward(Reward reward)
+        public async Awaitable<(TwitchResponseCode responseCode, Reward reward)> UpdateReward(Reward reward)
         {
             JObject jsonObject = JObject.FromObject(new
             {
@@ -127,7 +145,11 @@ namespace Mahuni.Twitch.Extension
                 is_global_cooldown_enabled = reward.global_cooldown_setting.is_enabled,
                 global_cooldown_seconds = reward.global_cooldown_setting.global_cooldown_seconds
             });
-            return await TwitchRequest.AwaitablePatch($"channel_points/custom_rewards?broadcaster_id={BroadcasterID}&id={reward.id}", jsonObject.ToString());
+            
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitablePatch($"channel_points/custom_rewards?broadcaster_id={BroadcasterID}&id={reward.id}", jsonObject.ToString());
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<Reward>>(response.responseBody).GetFirst() : null);
         }
         
         /// <summary>
@@ -150,9 +172,12 @@ namespace Mahuni.Twitch.Extension
         /// https://dev.twitch.tv/docs/api/reference/#get-polls
         /// </summary>
         /// <returns>Awaitable response code and body from requesting the polls list</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> GetPolls()
+        public async Awaitable<(TwitchResponseCode responseCode, List<Poll> polls)> GetPolls()
         {
-            return await TwitchRequest.AwaitableGet($"polls?broadcaster_id={BroadcasterID}");
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitableGet($"polls?broadcaster_id={BroadcasterID}");
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<Poll>>(response.responseBody).data.ToList() : null);
         }
 
         /// <summary>
@@ -165,7 +190,7 @@ namespace Mahuni.Twitch.Extension
         /// <param name="enableChannelPointVoting">True to enable users spending channel points per vote</param>
         /// <param name="channelPoints">The amount of channel points per additional vote (only works if boolean enableChannelPointVoting is set to true)</param>
         /// <returns>>Awaitable response code and body from requesting to create a new poll</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> CreatePoll(string pollTitle, string[] choices, int durationSeconds = 15, bool enableChannelPointVoting = false, int channelPoints = 1)
+        public async Awaitable<(TwitchResponseCode responseCode, Poll poll)> CreatePoll(string pollTitle, string[] choices, int durationSeconds = 15, bool enableChannelPointVoting = false, int channelPoints = 1)
         {
             IEnumerable<JObject> pollChoices = choices.Select(outcomeTitle => JObject.FromObject(new { title = outcomeTitle }));
             JObject jsonObject = JObject.FromObject(new
@@ -178,7 +203,10 @@ namespace Mahuni.Twitch.Extension
                 channel_points_per_vote =  channelPoints
             });
             
-            return await TwitchRequest.AwaitablePost("polls", jsonObject.ToString());
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitablePost("polls", jsonObject.ToString());
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<Poll>>(response.responseBody).GetFirst() : null);
         }
        
         /// <summary>
@@ -188,7 +216,7 @@ namespace Mahuni.Twitch.Extension
         /// <param name="pollId">The ID of the poll</param>
         /// <param name="pollStatus">The status to set the poll to (either TERMINATED or ARCHIVED)</param>
         /// <returns>>Awaitable response code and body from requesting to end a poll</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> EndPoll(string pollId, Poll.Status pollStatus = Poll.Status.TERMINATED)
+        public async Awaitable<(TwitchResponseCode responseCode, Poll poll)> EndPoll(string pollId, Poll.Status pollStatus = Poll.Status.TERMINATED)
         {
             JObject jsonObject = JObject.FromObject(new
             {
@@ -197,7 +225,10 @@ namespace Mahuni.Twitch.Extension
                 status = pollStatus.ToString()
             });
             
-            return await TwitchRequest.AwaitablePatch("polls", jsonObject.ToString());
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitablePatch("polls", jsonObject.ToString());
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<Poll>>(response.responseBody).GetFirst() : null);
         }
 
         #endregion
@@ -209,9 +240,12 @@ namespace Mahuni.Twitch.Extension
         /// https://dev.twitch.tv/docs/api/reference/#get-predictions
         /// </summary>
         /// <returns>Awaitable response code and body from requesting the prediction list</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> GetPredictions()
+        public async Awaitable<(TwitchResponseCode responseCode, List<Prediction> prediction)> GetPredictions()
         {
-            return await TwitchRequest.AwaitableGet($"predictions?broadcaster_id={BroadcasterID}");
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitableGet($"predictions?broadcaster_id={BroadcasterID}");
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<Prediction>>(response.responseBody).data.ToList() : null);
         }
 
         /// <summary>
@@ -222,7 +256,7 @@ namespace Mahuni.Twitch.Extension
         /// <param name="outcomeTitles">All possible outcomes</param>
         /// <param name="durationSeconds">The duration of the prediction until it becomes locked. The minimum is 30 seconds and the maximum is 1800 seconds (30 minutes)</param>
         /// <returns>Awaitable response code and body from requesting to create a prediction</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> CreatePrediction(string predictionTitle, string[] outcomeTitles, int durationSeconds = 30)
+        public async Awaitable<(TwitchResponseCode responseCode, Prediction prediction)> CreatePrediction(string predictionTitle, string[] outcomeTitles, int durationSeconds = 30)
         {
             IEnumerable<JObject> predictionOutcomes = outcomeTitles.Select(outcomeTitle => JObject.FromObject(new { title = outcomeTitle }));
             JObject jsonObject = JObject.FromObject(new
@@ -233,7 +267,10 @@ namespace Mahuni.Twitch.Extension
                 prediction_window = durationSeconds
             });
             
-            return await TwitchRequest.AwaitablePost("predictions", jsonObject.ToString());
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitablePost("predictions", jsonObject.ToString());
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<Prediction>>(response.responseBody).GetFirst() : null);
         }
         
         /// <summary>
@@ -244,7 +281,7 @@ namespace Mahuni.Twitch.Extension
         /// <param name="winningOutcomeId">The ID of the predictions winning outcome. Is optional when canceling</param>
         /// <param name="status">The status to set the prediction to</param>
         /// <returns>Awaitable response code and body from requesting to resolve a prediction</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> ResolvePrediction(string predictionId, string winningOutcomeId, Prediction.Status status = Prediction.Status.RESOLVED)
+        public async Awaitable<(TwitchResponseCode responseCode, Prediction prediction)> ResolvePrediction(string predictionId, string winningOutcomeId, Prediction.Status status = Prediction.Status.RESOLVED)
         {
             JObject jsonObject = JObject.FromObject(new
             {
@@ -254,7 +291,10 @@ namespace Mahuni.Twitch.Extension
                 winning_outcome_id = winningOutcomeId
             });
             
-            return await TwitchRequest.AwaitablePatch("predictions", jsonObject.ToString());
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitablePatch("predictions", jsonObject.ToString());
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<Prediction>>(response.responseBody).GetFirst() : null);
         }
 
         #endregion
@@ -266,9 +306,13 @@ namespace Mahuni.Twitch.Extension
         /// https://dev.twitch.tv/docs/api/reference/#get-ad-schedule
         /// </summary>
         /// <returns>Awaitable response code and body from requesting the ad schedule</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> GetAdSchedule()
+        public async Awaitable<(TwitchResponseCode responseCode, AdSchedule schedule)> GetAdSchedule()
         {
-            return await TwitchRequest.AwaitableGet($"channels/ads?broadcaster_id={BroadcasterID}");
+            (TwitchResponseCode responseCode, string responseBody) response =  await TwitchRequest.AwaitableGet($"channels/ads?broadcaster_id={BroadcasterID}");
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<AdSchedule>>(response.responseBody).GetFirst() : null);
+            
         }
         
         /// <summary>
@@ -276,9 +320,12 @@ namespace Mahuni.Twitch.Extension
         /// https://dev.twitch.tv/docs/api/reference/#snooze-next-ad
         /// </summary>
         /// <returns>Awaitable response code and body from requesting to snooze the next ad</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> SnoozeNextAd()
+        public async Awaitable<(TwitchResponseCode responseCode, AdSchedule schedule)> SnoozeNextAd()
         {
-            return await TwitchRequest.AwaitablePost($"channels/ads/schedule/snooze?broadcaster_id={BroadcasterID}", new JObject().ToString());
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitablePost($"channels/ads/schedule/snooze?broadcaster_id={BroadcasterID}", new JObject().ToString());
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<AdSchedule>>(response.responseBody).GetFirst() : null);
         }
         
         #endregion
@@ -292,7 +339,7 @@ namespace Mahuni.Twitch.Extension
         /// <param name="message">The message to send. The message is limited to a maximum of 500 characters</param>
         /// <param name="pin">If true, the message will be sent and immediately pinned</param>
         /// <returns>Awaitable response code and body from requesting to send a chat message</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> ChatSendMessage(string message, bool pin = false)
+        public async Awaitable<(TwitchResponseCode responseCode, ChatMessage chatMessage)> ChatSendMessage(string message, bool pin = false)
         {
             JObject jsonObject = JObject.FromObject(new
             {
@@ -302,7 +349,10 @@ namespace Mahuni.Twitch.Extension
                 pin
             });
             
-            return await TwitchRequest.AwaitablePost($"chat/messages", jsonObject.ToString());
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitablePost($"chat/messages", jsonObject.ToString());
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<ChatMessage>>(response.responseBody).GetFirst() : null);
         }
         
         /// <summary>
@@ -312,7 +362,7 @@ namespace Mahuni.Twitch.Extension
         /// <param name="message">The announcement to make in the broadcaster’s chat room. Announcements are limited to a maximum of 500 characters</param>
         /// <param name="color">The color used to highlight the announcement</param>
         /// <returns>Awaitable response code and body from requesting to send a chat announcement</returns>
-        public async Awaitable<(TwitchResponseCode responseCode, string responseBody)> ChatSendAnnouncement(string message, ChatColor color = ChatColor.primary)
+        public async Awaitable<(TwitchResponseCode responseCode, ChatMessage chatMessage)> ChatSendAnnouncement(string message, ChatColor color = ChatColor.primary)
         {
             JObject jsonObject = JObject.FromObject(new
             {
@@ -320,7 +370,10 @@ namespace Mahuni.Twitch.Extension
                 color = color.ToString()
             });
             
-            return await TwitchRequest.AwaitablePost($"chat/announcements?broadcaster_id={BroadcasterID}&moderator_id={BroadcasterID}", jsonObject.ToString());
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitablePost($"chat/announcements?broadcaster_id={BroadcasterID}&moderator_id={BroadcasterID}", jsonObject.ToString());
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<ChatMessage>>(response.responseBody).GetFirst() : null);
         }
         
         #endregion

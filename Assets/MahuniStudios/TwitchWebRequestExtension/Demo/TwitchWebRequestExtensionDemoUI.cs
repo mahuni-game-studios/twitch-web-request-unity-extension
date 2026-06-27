@@ -126,12 +126,11 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
             return;
         }
         
-        (TwitchResponseCode responseCode, string responseBody) response = await twitchWebRequestHandler.CreateReward(rewardTitleText.text, cost);
+        (TwitchResponseCode responseCode, Reward reward) response = await twitchWebRequestHandler.CreateReward(rewardTitleText.text, cost);
         
         if (response.responseCode == TwitchResponseCode.OK)
         {
-            Reward reward = JsonUtility.FromJson<Data<Reward>>(response.responseBody).GetFirst();
-            rewardId = reward.id;
+            rewardId = response.reward.id;
         
             rewardResultText.text = "<color=\"green\">Reward created!";
             Debug.Log(rewardResultText.text);
@@ -179,12 +178,11 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
     /// </summary>
     private async void OnGetRewardsButtonClicked()
     {
-        (TwitchResponseCode responseCode, string responseBody) response = await twitchWebRequestHandler.GetRewards();
+        (TwitchResponseCode responseCode, Dictionary<string, Reward> rewards) response = await twitchWebRequestHandler.GetRewards();
        
         if (response.responseCode == TwitchResponseCode.OK)
         {
-            Reward[] rewardData = JsonUtility.FromJson<Data<Reward>>(response.responseBody).data;
-            rewardResultText.text = $"<color=\"green\">Rewards: {(!rewardData.Any() ? "No rewards yet." : string.Join(", ", rewardData.Select(d => d.title)))}";
+            rewardResultText.text = $"<color=\"green\">Rewards: {(!response.rewards.Any() ? "No rewards yet." : string.Join(", ", response.rewards.Values.Select(d => d.title)))}";
             Debug.Log(rewardResultText.text);
         }
         else
