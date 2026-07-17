@@ -162,7 +162,28 @@ namespace Mahuni.Twitch.Extension
         {
             return await TwitchRequest.AwaitableDelete($"channel_points/custom_rewards?broadcaster_id={BroadcasterID}&id={rewardId}");
         }
-        
+
+        /// <summary>
+        /// Updates a redemption’s status. You may update a redemption only if its status is UNFULFILLED.
+        /// <see href="https://dev.twitch.tv/docs/api/reference/#update-redemption-status">Official documentation</see>
+        /// <param name="rewardId">The reward id to update</param>
+        /// <param name="redemptionId">The redemption id to update</param>
+        /// <param name="redemptionStatus">The redemption status to update to. Valid is FULFILLED or CANCELED</param>
+        /// </summary>
+        /// <returns>Awaitable response code and response body from requesting to update a reward redemption status</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, RewardRedemption redemption)> UpdateRedemptionStatus(string rewardId, string redemptionId, RewardRedemption.RedemptionStatus redemptionStatus)
+        {
+            JObject jsonObject = JObject.FromObject(new
+            {
+                status = redemptionStatus.ToString()
+            });
+            
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitablePatch($"channel_points/custom_rewards/redemptions?broadcaster_id={BroadcasterID}&reward_id={rewardId}&id={redemptionId}", jsonObject.ToString());
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<RewardRedemption>>(response.responseBody).GetFirst() : null);
+        }
+
         #endregion
 
         #region Poll Requests

@@ -106,6 +106,24 @@ namespace Mahuni.Twitch.Extension
             public long global_cooldown_seconds;
         }
     }
+    
+    // See https://dev.twitch.tv/docs/api/reference/#get-custom-reward-redemption
+    [Serializable]
+    public class RewardRedemption
+    {
+        public string broadcaster_id;
+        public string broadcaster_login;
+        public string broadcaster_name;
+        public string id;
+        public string user_login;
+        public string user_id;
+        public string user_name;
+        public RedemptionStatus status;
+        public string redeemed_at;
+        public Reward reward;
+        
+        public enum RedemptionStatus { CANCELED, FULFILLED, UNFULFILLED}
+    }
 
     // See https://dev.twitch.tv/docs/api/reference/#create-prediction
     [Serializable]
