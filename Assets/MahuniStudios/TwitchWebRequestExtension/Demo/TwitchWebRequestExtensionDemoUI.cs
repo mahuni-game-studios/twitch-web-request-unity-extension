@@ -62,7 +62,7 @@ public class TwitchWebRequestExtensionDemoUI : MonoBehaviour
     {
         authenticationDescriptionText.text = "<color=\"orange\">Authentication ongoing...";
         TwitchAuthentication.ConnectionInformation infos = new(twitchClientIdText.text, new List<string>(){TwitchAuthentication.ConnectionInformation.CHANNEL_MANAGE_REDEMPTIONS});
-        TwitchAuthentication.StartAuthenticationValidation(this, infos);
+        TwitchAuthentication.StartAuthenticationValidation(channelNameText.text, this, infos);
     }
 
     /// <summary>

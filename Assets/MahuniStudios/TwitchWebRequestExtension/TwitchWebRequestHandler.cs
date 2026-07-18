@@ -396,7 +396,18 @@ namespace Mahuni.Twitch.Extension
             bool success = response.responseCode == TwitchResponseCode.OK;
             return (response.responseCode, success ? JsonUtility.FromJson<Data<ChatMessage>>(response.responseBody).GetFirst() : null);
         }
-        
+
+        /// <summary>
+        /// Unpins a pinned chat message from the specified broadcaster’s chat room
+        /// https://dev.twitch.tv/docs/api/reference/#unpin-chat-message
+        /// </summary>
+        /// <param name="messageId">The ID of the message to unpin</param>
+        /// <returns>Awaitable response code  from requesting to unpin a chat message</returns>
+        public async Awaitable<TwitchResponseCode> UnpinMessage(string messageId)
+        {
+           return await TwitchRequest.AwaitableDelete($"chat/pins?broadcaster_id={BroadcasterID}&moderator_id={BroadcasterID}&message_id={messageId}");
+        }
+
         #endregion
     }
 }
