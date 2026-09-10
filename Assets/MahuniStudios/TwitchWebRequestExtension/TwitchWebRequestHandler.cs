@@ -39,7 +39,7 @@ namespace Mahuni.Twitch.Extension
             
             if (response.responseCode != TwitchResponseCode.OK)
             {
-                Debug.LogError("TwitchWebRequest: Error for initial web request setup when trying to get the broadcaster ID: " + response.responseCode);
+                Debug.LogError($"{nameof(TwitchWebRequestHandler)}: Error for initial web request setup when trying to get the broadcaster ID: {response.responseCode}");
                 BroadcasterID = string.Empty;
                 return false;
             }
@@ -73,6 +73,10 @@ namespace Mahuni.Twitch.Extension
         #endregion
 
         #region Reward Requests
+        
+        public const int REWARD_TITLE_MAX_LENGTH = 45;
+        public const int REWARD_COST_MIN = 1;
+        public const int REWARD_PROMPT_MAX = 200;
         
         /// <summary>
         /// Gets a list of custom rewards that the specified broadcaster created.
@@ -109,6 +113,19 @@ namespace Mahuni.Twitch.Extension
         public async Awaitable<(TwitchResponseCode responseCode, Reward reward)> CreateReward(string rewardTitle, long rewardCost, bool automaticRedemption = true, bool isUserInputRequired = false, string redeemPrompt = "",
             bool isCooldownEnabled = false, int cooldownSeconds = 1, string customColorHex = null)
         {
+            if (rewardTitle.Length > REWARD_TITLE_MAX_LENGTH)
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Creating reward will fail - title is bigger than {REWARD_TITLE_MAX_LENGTH} chars: {rewardTitle.Length}.");
+            }
+            if (rewardCost < REWARD_COST_MIN )
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Creating reward will fail - the cost is invalid (min is {REWARD_COST_MIN}): {rewardCost}.");
+            }
+            if (redeemPrompt.Length > REWARD_PROMPT_MAX)
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Creating reward will fail - prompt is bigger than {REWARD_PROMPT_MAX} chars: {redeemPrompt.Length}.");
+            }
+            
             JObject jsonObject = JObject.FromObject(new
             {
                 title = rewardTitle,
@@ -188,6 +205,15 @@ namespace Mahuni.Twitch.Extension
 
         #region Poll Requests
 
+        public const int POLL_TITLE_MAX_LENGTH = 60;
+        public const int POLL_CHOICES_MIN = 2;
+        public const int POLL_CHOICES_MAX = 5;
+        public const int POLL_CHOICES_TITLE_MAX_LENGTH = 25;
+        public const int POLL_DURATION_MIN = 15;
+        public const int POLL_DURATION_MAX = 1800;
+        public const int POLL_CHANNEL_POINT_MIN = 1;
+        public const int POLL_CHANNEL_POINT_MAX = 1000000;
+        
         /// <summary>
         /// Get the polls
         /// https://dev.twitch.tv/docs/api/reference/#get-polls
@@ -200,19 +226,40 @@ namespace Mahuni.Twitch.Extension
             bool success = response.responseCode == TwitchResponseCode.OK;
             return (response.responseCode, success ? JsonUtility.FromJson<Data<Poll>>(response.responseBody).data.ToList() : null);
         }
-
+        
         /// <summary>
         /// Creates a poll
         /// https://dev.twitch.tv/docs/api/reference/#create-poll
         /// </summary>
-        /// <param name="pollTitle">The title of the poll</param>
-        /// <param name="choices">An array of poll options</param>
-        /// <param name="durationSeconds">The duration of the poll in seconds. Min = 30s, Max = 1800s</param>
+        /// <param name="pollTitle">The title of the poll. Max = 60 chars</param>
+        /// <param name="choices">An array of poll options. Min choices 2, max choices 5, Max per option title = 25 chars</param>
+        /// <param name="durationSeconds">The duration of the poll in seconds. Min = 15s, Max = 1800s</param>
         /// <param name="enableChannelPointVoting">True to enable users spending channel points per vote</param>
-        /// <param name="channelPoints">The amount of channel points per additional vote (only works if boolean enableChannelPointVoting is set to true)</param>
+        /// <param name="channelPoints">The amount of channel points per additional vote (only works if boolean enableChannelPointVoting is set to true). Min = 1, Max 1.000.000</param>
         /// <returns>>Awaitable response code and body from requesting to create a new poll</returns>
         public async Awaitable<(TwitchResponseCode responseCode, Poll poll)> CreatePoll(string pollTitle, string[] choices, int durationSeconds = 15, bool enableChannelPointVoting = false, int channelPoints = 1)
         {
+            if (pollTitle.Length > POLL_TITLE_MAX_LENGTH)
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Creating poll will fail - title is bigger than {POLL_TITLE_MAX_LENGTH} chars: {pollTitle.Length}.");
+            }
+            if (choices.Length is < POLL_CHOICES_MIN or POLL_CHOICES_MAX)
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Creating poll will fail - the choice count is invalid (range is {POLL_CHOICES_MIN}-{POLL_CHOICES_MAX}): {choices.Length}.");
+            }
+            if (choices.Any(c => c.Length > POLL_CHOICES_TITLE_MAX_LENGTH))
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Creating poll will fail - a choice title is bigger than {POLL_CHOICES_TITLE_MAX_LENGTH} chars.");
+            }
+            if (durationSeconds is < POLL_DURATION_MIN or > POLL_DURATION_MAX)
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Creating poll will fail - duration is invalid (range is {POLL_DURATION_MIN}-{POLL_DURATION_MAX}): {durationSeconds}s.");
+            }
+            if (enableChannelPointVoting && channelPoints is < POLL_CHANNEL_POINT_MIN or > POLL_CHANNEL_POINT_MAX)
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Creating poll will fail - channel points are invalid (range is {POLL_CHANNEL_POINT_MIN}-{POLL_CHANNEL_POINT_MAX}): {channelPoints}.");
+            }
+            
             IEnumerable<JObject> pollChoices = choices.Select(outcomeTitle => JObject.FromObject(new { title = outcomeTitle }));
             JObject jsonObject = JObject.FromObject(new
             {
@@ -256,6 +303,13 @@ namespace Mahuni.Twitch.Extension
 
         #region Prediction Requests
         
+        public const int PREDICTION_TITLE_MAX_LENGTH = 45;
+        public const int PREDICTION_OUTCOMES_MIN = 2;
+        public const int PREDICTION_OUTCOMES_MAX = 10;
+        public const int PREDICTION_OUTCOMES_TITLE_MAX_LENGTH = 25;
+        public const int PREDICTION_DURATION_MIN = 30;
+        public const int PREDICTION_DURATION_MAX = 1800;
+        
         /// <summary>
         /// Get the predictions
         /// https://dev.twitch.tv/docs/api/reference/#get-predictions
@@ -279,6 +333,23 @@ namespace Mahuni.Twitch.Extension
         /// <returns>Awaitable response code and body from requesting to create a prediction</returns>
         public async Awaitable<(TwitchResponseCode responseCode, Prediction prediction)> CreatePrediction(string predictionTitle, string[] outcomeTitles, int durationSeconds = 30)
         {
+            if (predictionTitle.Length > PREDICTION_TITLE_MAX_LENGTH)
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Creating prediction will fail - title is bigger than {PREDICTION_TITLE_MAX_LENGTH} chars: {predictionTitle.Length}.");
+            }
+            if (outcomeTitles.Length is < PREDICTION_OUTCOMES_MIN or PREDICTION_OUTCOMES_MAX)
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Creating prediction will fail - the choice count is invalid (range is {PREDICTION_OUTCOMES_MIN}-{PREDICTION_OUTCOMES_MAX}): {outcomeTitles.Length}.");
+            }
+            if (outcomeTitles.Any(c => c.Length > PREDICTION_OUTCOMES_TITLE_MAX_LENGTH))
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Creating prediction will fail - a choice title is bigger than {PREDICTION_OUTCOMES_TITLE_MAX_LENGTH} chars.");
+            }
+            if (durationSeconds is < PREDICTION_DURATION_MIN or > PREDICTION_DURATION_MAX)
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Creating prediction will fail - duration is invalid (range is {PREDICTION_DURATION_MIN}-{PREDICTION_DURATION_MAX}): {durationSeconds}s.");
+            }
+            
             IEnumerable<JObject> predictionOutcomes = outcomeTitles.Select(outcomeTitle => JObject.FromObject(new { title = outcomeTitle }));
             JObject jsonObject = JObject.FromObject(new
             {
@@ -353,6 +424,8 @@ namespace Mahuni.Twitch.Extension
 
         #region Chat Requests
         
+        public const int CHAT_MESSAGE_MAX_LENGTH = 500;
+        
         /// <summary>
         /// Sends a message to the broadcaster’s chat room
         /// https://dev.twitch.tv/docs/api/reference/#send-chat-message
@@ -362,6 +435,11 @@ namespace Mahuni.Twitch.Extension
         /// <returns>Awaitable response code and body from requesting to send a chat message</returns>
         public async Awaitable<(TwitchResponseCode responseCode, ChatMessage chatMessage)> ChatSendMessage(string message, bool pin = false)
         {
+            if (message.Length < CHAT_MESSAGE_MAX_LENGTH)
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Sending chat message will fail - the message is invalid (max is {CHAT_MESSAGE_MAX_LENGTH}): {message.Length}.");
+            }
+            
             JObject jsonObject = JObject.FromObject(new
             {
                 broadcaster_id = BroadcasterID,
@@ -385,6 +463,11 @@ namespace Mahuni.Twitch.Extension
         /// <returns>Awaitable response code and body from requesting to send a chat announcement</returns>
         public async Awaitable<(TwitchResponseCode responseCode, ChatMessage chatMessage)> ChatSendAnnouncement(string message, ChatColor color = ChatColor.primary)
         {
+            if (message.Length < CHAT_MESSAGE_MAX_LENGTH)
+            {
+                Debug.LogWarning($"{nameof(TwitchWebRequestHandler)}: Sending chat announcement will fail - the announcement is invalid (max is {CHAT_MESSAGE_MAX_LENGTH}): {message.Length}.");
+            }
+            
             JObject jsonObject = JObject.FromObject(new
             {
                 message,
@@ -408,6 +491,34 @@ namespace Mahuni.Twitch.Extension
            return await TwitchRequest.AwaitableDelete($"chat/pins?broadcaster_id={BroadcasterID}&moderator_id={BroadcasterID}&message_id={messageId}");
         }
 
+        #endregion
+
+        #region AutoMod Requests
+        
+        /// <summary>
+        /// Checks whether AutoMod would flag the specified message for review.
+        /// https://dev.twitch.tv/docs/api/reference/#check-automod-status
+        /// </summary>
+        /// <param name="messages">An array of messages. Min = 1, Max = 100</param>
+        /// <returns>Awaitable response code and body from requesting to check the automod status</returns>
+        public async Awaitable<(TwitchResponseCode responseCode, AutoModStatus[] status)> CheckAutoModStatus(string[] messages)
+        {
+            List<object> data = new();
+            for (int i = 0; i < messages.Length; i++)
+            {
+                data.Add(new { msg_id = i, msg_text = messages[i] });
+            }
+            JObject jsonObject = JObject.FromObject(new
+            {
+                data
+            });
+
+            (TwitchResponseCode responseCode, string responseBody) response = await TwitchRequest.AwaitablePost($"moderation/enforcements/status?broadcaster_id={BroadcasterID}", jsonObject.ToString());
+            
+            bool success = response.responseCode == TwitchResponseCode.OK;
+            return (response.responseCode, success ? JsonUtility.FromJson<Data<AutoModStatus>>(response.responseBody).data : null);
+        }
+        
         #endregion
     }
 }

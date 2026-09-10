@@ -231,4 +231,12 @@ namespace Mahuni.Twitch.Extension
     {
         primary, blue, green, orange, purple
     }
+    
+    // See https://dev.twitch.tv/docs/api/reference/#check-automod-status
+    [Serializable]
+    public class AutoModStatus
+    {
+        public string msg_id;
+        public bool is_permitted;
+    }
 }
