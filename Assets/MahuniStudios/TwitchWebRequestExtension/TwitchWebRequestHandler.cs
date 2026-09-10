@@ -230,6 +230,7 @@ namespace Mahuni.Twitch.Extension
         /// <summary>
         /// Creates a poll
         /// https://dev.twitch.tv/docs/api/reference/#create-poll
+        /// ATTENTION - The title and choices are checked with auto mod, if blocked the request will fail with Bad Request - ProtocolError
         /// </summary>
         /// <param name="pollTitle">The title of the poll. Max = 60 chars</param>
         /// <param name="choices">An array of poll options. Min choices 2, max choices 5, Max per option title = 25 chars</param>
@@ -326,6 +327,7 @@ namespace Mahuni.Twitch.Extension
         /// <summary>
         /// Creates a prediction
         /// https://dev.twitch.tv/docs/api/reference/#create-prediction
+        /// ATTENTION - The title and outcome titles are checked with auto mod, if blocked the request will fail with Bad Request - ProtocolError
         /// </summary>
         /// <param name="predictionTitle">The title of the prediction</param>
         /// <param name="outcomeTitles">All possible outcomes</param>
