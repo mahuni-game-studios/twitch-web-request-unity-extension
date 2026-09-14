@@ -4,6 +4,7 @@ namespace Mahuni.Twitch.Extension
 {
     using System;
     using System.Collections;
+    using System.Linq;
     using UnityEngine.Networking;
     using UnityEngine;
     using System.Threading.Tasks;
@@ -21,6 +22,7 @@ namespace Mahuni.Twitch.Extension
         
         private static readonly bool DebugRequests = true;
         private static readonly bool DebugResponseContent = true;
+        private static readonly bool DebugResponseHeaders = false;
 
         #region Get
         
@@ -417,12 +419,16 @@ namespace Mahuni.Twitch.Extension
                 {
                     content = $" -> Content: {request.downloadHandler.text}";
                 }
+                
                 Debug.Log($"Receive {request.method}: {(TwitchResponseCode)request.responseCode} from '{request.url}'{content}");
             }
             else
             {
                 Debug.LogError($"Receive {request.method}: {(TwitchResponseCode)request.responseCode} from '{request.url} -> Error: '{request.error}', Result: {request.result}");
             }
+            
+            string headers = string.Join("; ", request.GetResponseHeaders().Select(h => $"{h.Key}: {h.Value}"));
+            if (DebugResponseHeaders) Debug.Log($"Response Headers: [{headers}]");
         }
         
         #endregion

@@ -500,6 +500,7 @@ namespace Mahuni.Twitch.Extension
         /// <summary>
         /// Checks whether AutoMod would flag the specified message for review.
         /// https://dev.twitch.tv/docs/api/reference/#check-automod-status
+        /// WARNING: Twitch has a rate limit to the amount of messages, which is e.g. for affiliate 10 per minute / 100 per hour
         /// </summary>
         /// <param name="messages">An array of messages. Min = 1, Max = 100</param>
         /// <returns>Awaitable response code and body from requesting to check the automod status</returns>
